@@ -15,4 +15,8 @@ public interface QuizRecordDao {
     // Grab all scores for the Admin Panel, newest first
     @Query("SELECT * FROM quiz_record_table ORDER BY timestamp DESC")
     List<QuizRecord> getAllRecords();
+
+    // 🌟 RENAME QUERY ADDED HERE
+    @Query("UPDATE quiz_record_table SET playerName = :newName WHERE playerName = :oldName")
+    void updateProfileName(String oldName, String newName);
 }

@@ -43,22 +43,33 @@
             app:autoSizeTextType="uniform"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@id/ivAvatar"
+            app:layout_constraintEnd_toStartOf="@id/btnEditProfile"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Player Name" />
 
-
         <ImageButton
-            android:id="@+id/btnDeleteProfile"
+            android:id="@+id/btnEditProfile"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="10dp"
+            android:padding="12dp"
             android:scaleType="centerInside"
-            android:src="@android:drawable/ic_menu_delete"
+            android:src="@android:drawable/ic_menu_edit"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnDeleteProfile"
             app:layout_constraintTop_toTopOf="parent"
-            app:tint="#F44336" />
+            app:tint="#4CAF50" /> <ImageButton
+        android:id="@+id/btnDeleteProfile"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:padding="10dp"
+        android:scaleType="centerInside"
+        android:src="@android:drawable/ic_menu_delete"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="#F44336" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>
