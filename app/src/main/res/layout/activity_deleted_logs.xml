@@ -57,14 +57,12 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <ListView
-        android:id="@+id/lvDeletedLogs"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvDeletedLogs"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
         android:clipToPadding="false"
-        android:divider="#F5F5F5"
-        android:dividerHeight="12dp"
         android:paddingHorizontal="16dp"
         android:paddingBottom="16dp"
         app:layout_constraintBottom_toBottomOf="parent"

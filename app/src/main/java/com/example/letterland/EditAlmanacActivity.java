@@ -106,10 +106,13 @@ public class EditAlmanacActivity extends AppCompatActivity {
                             // 1. Delete from Database
                             db.wordDao().delete(word);
 
-                            // 🚀 2. Add to History Logs WITH THE USER'S PROFILE NAME! 🚀
-                            db.logDao().insertLog(new LogEntry("DELETED ALMANAC WORD", "Word: " + word.word + " (Profile: " + word.profileName + ")", System.currentTimeMillis()));
+                            // 🚀 2. THE FIX: Log with exact format: Word | Image | Collector | Deleter
+                            String logDetails = word.word + "|" + word.imagePath + "|" + word.profileName + "|Admin";
+                            db.logDao().insertLog(new LogEntry("DELETED WORD", logDetails, System.currentTimeMillis()));
 
-                            // 3. Delete physical image file to save phone space
+                            // 🚀 3. THE FIX: DO NOT delete the physical file!
+                            // Keep it on the phone so the Deleted Logs screen can show it and restore it!
+                            /*
                             if (word.imagePath != null) {
                                 try {
                                     java.io.File file = new java.io.File(android.net.Uri.parse(word.imagePath).getPath());
@@ -120,6 +123,7 @@ public class EditAlmanacActivity extends AppCompatActivity {
                                     e.printStackTrace();
                                 }
                             }
+                            */
                         }
 
                         runOnUiThread(() -> {

@@ -93,7 +93,7 @@ public class PlayerLogsActivity extends AppCompatActivity {
         for (LogEntry log : allLogs) {
             String[] parts = log.details.split("\\|");
             if (parts.length < 2) continue;
-            String type = parts[0]; // "ADDED", "DELETED", "EDITED", "RESTORED"
+            String type = parts[0]; // "ADDED", "DELETED", "EDITED", "RESTORED", "RENAMED_FROM"
 
             if (filterType.equals("ALL")) {
                 filteredList.add(log);
@@ -101,7 +101,8 @@ public class PlayerLogsActivity extends AppCompatActivity {
                 filteredList.add(log);
             } else if (filterType.equals("ADDED") && (type.equals("ADDED") || type.equals("RESTORED"))) {
                 filteredList.add(log);
-            } else if (filterType.equals("EDITED") && type.equals("EDITED")) {
+            } else if (filterType.equals("EDITED") && (type.equals("EDITED") || type.equals("RENAMED_FROM"))) {
+                // 🚀 FIX: Renamed logs now properly map to the Edited filter
                 filteredList.add(log);
             }
         }
@@ -143,10 +144,15 @@ public class PlayerLogsActivity extends AppCompatActivity {
         public void onBindViewHolder(@NonNull LogViewHolder holder, int position) {
             LogEntry log = logs.get(position);
 
-            // Our details string looks like: "ADDED|PlayerName"
+            // Split the details string based on our exact formatting
             String[] parts = log.details.split("\\|");
             String type = parts.length > 0 ? parts[0] : "UNKNOWN";
             String playerName = parts.length > 1 ? parts[1] : "Unknown Player";
+
+            // 🚀 FIX: If it was a rename, the new name is located in the 3rd slot!
+            if (type.equals("RENAMED_FROM") && parts.length > 2) {
+                playerName = parts[2];
+            }
 
             holder.tvLogPlayerName.setText(playerName);
             holder.tvLogDate.setText(sdf.format(new Date(log.timestamp)));
@@ -154,30 +160,37 @@ public class PlayerLogsActivity extends AppCompatActivity {
             // 🎨 FORMAT ROW BASED ON ACTIVITY TYPE
             if (type.equals("DELETED")) {
                 holder.tvLogAction.setText("Profile was deleted");
-                holder.tvLogAction.setTextColor(Color.parseColor("#F44336")); // Red text
+                holder.tvLogAction.setTextColor(Color.parseColor("#F44336"));
                 holder.ivLogIcon.setColorFilter(Color.parseColor("#F44336"));
                 holder.ivLogIcon.setImageResource(android.R.drawable.ic_menu_delete);
-
-                // ⭐ SHOW RESTORE BUTTON ONLY FOR DELETED ITEMS!
                 holder.btnRestorePlayer.setVisibility(View.VISIBLE);
 
             } else if (type.equals("ADDED")) {
                 holder.tvLogAction.setText("Added as a new profile");
-                holder.tvLogAction.setTextColor(Color.parseColor("#4CAF50")); // Green text
+                holder.tvLogAction.setTextColor(Color.parseColor("#4CAF50"));
                 holder.ivLogIcon.setColorFilter(Color.parseColor("#4CAF50"));
                 holder.ivLogIcon.setImageResource(android.R.drawable.ic_menu_add);
                 holder.btnRestorePlayer.setVisibility(View.GONE);
 
             } else if (type.equals("RESTORED")) {
                 holder.tvLogAction.setText("Profile was restored by Admin");
-                holder.tvLogAction.setTextColor(Color.parseColor("#4CAF50")); // Green text
+                holder.tvLogAction.setTextColor(Color.parseColor("#4CAF50"));
                 holder.ivLogIcon.setColorFilter(Color.parseColor("#4CAF50"));
                 holder.ivLogIcon.setImageResource(android.R.drawable.ic_menu_revert);
                 holder.btnRestorePlayer.setVisibility(View.GONE);
 
             } else if (type.equals("EDITED")) {
                 holder.tvLogAction.setText("Changed avatar image");
-                holder.tvLogAction.setTextColor(Color.parseColor("#FF9800")); // Orange text
+                holder.tvLogAction.setTextColor(Color.parseColor("#FF9800"));
+                holder.ivLogIcon.setColorFilter(Color.parseColor("#FF9800"));
+                holder.ivLogIcon.setImageResource(android.R.drawable.ic_menu_edit);
+                holder.btnRestorePlayer.setVisibility(View.GONE);
+
+            } else if (type.equals("RENAMED_FROM")) {
+                // 🚀 FIX: Explicit handling for the rename event so it doesn't fall into the avatar bucket
+                String oldName = parts.length > 1 ? parts[1] : "Unknown";
+                holder.tvLogAction.setText("Renamed from '" + oldName + "'");
+                holder.tvLogAction.setTextColor(Color.parseColor("#FF9800"));
                 holder.ivLogIcon.setColorFilter(Color.parseColor("#FF9800"));
                 holder.ivLogIcon.setImageResource(android.R.drawable.ic_menu_edit);
                 holder.btnRestorePlayer.setVisibility(View.GONE);
@@ -187,27 +200,26 @@ public class PlayerLogsActivity extends AppCompatActivity {
             holder.btnRestorePlayer.setOnClickListener(v -> {
                 SoundManager.getInstance(PlayerLogsActivity.this).playClick();
 
-                // 1. Add them back to SharedPreferences
                 SharedPreferences prefs = getSharedPreferences("LetterLandMemory", MODE_PRIVATE);
                 Set<String> oldProfiles = prefs.getStringSet("ALL_PROFILES", new HashSet<>());
                 Set<String> newProfiles = new HashSet<>(oldProfiles);
 
-                if (newProfiles.contains(playerName)) {
+                // Need a final variable for the inner thread to use
+                final String playerToRestore = holder.tvLogPlayerName.getText().toString();
+
+                if (newProfiles.contains(playerToRestore)) {
                     Toast.makeText(PlayerLogsActivity.this, "This profile already exists!", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
-                newProfiles.add(playerName);
+                newProfiles.add(playerToRestore);
                 prefs.edit().putStringSet("ALL_PROFILES", newProfiles).apply();
 
-                Toast.makeText(PlayerLogsActivity.this, playerName + " has been RESTORED!", Toast.LENGTH_LONG).show();
+                Toast.makeText(PlayerLogsActivity.this, playerToRestore + " has been RESTORED!", Toast.LENGTH_LONG).show();
 
-                // 2. Add a log saying they were restored
                 new Thread(() -> {
-                    LogEntry restoredLog = new LogEntry("PLAYER_LOG", "RESTORED|" + playerName, System.currentTimeMillis());
+                    LogEntry restoredLog = new LogEntry("PLAYER_LOG", "RESTORED|" + playerToRestore, System.currentTimeMillis());
                     AppDatabase.getInstance(PlayerLogsActivity.this).logDao().insertLog(restoredLog);
-
-                    // 3. Reload the UI!
                     runOnUiThread(PlayerLogsActivity.this::loadLogsFromDatabase);
                 }).start();
             });

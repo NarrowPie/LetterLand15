@@ -23,9 +23,11 @@ import java.util.Locale;
 public class WordDetailActivity extends AppCompatActivity {
 
     private TextToSpeech textToSpeech;
-    private boolean isTtsReady = false; // TTS Fix flag
+    private boolean isTtsReady = false;
     private String wordText;
     private String imagePath;
+    private String sourcePage;
+
     private TextView tvWord;
     private ImageView ivPicture;
 
@@ -72,51 +74,54 @@ public class WordDetailActivity extends AppCompatActivity {
         View btnNewImage = findViewById(R.id.btnDetailNewImage);
         View btnDelete = findViewById(R.id.btnDetailDelete);
 
-        // Scan controls
         View llScanControls = findViewById(R.id.llScanControls);
         View btnScanAgain = findViewById(R.id.btnScanAgain);
         View btnScanDelete = findViewById(R.id.btnScanDelete);
 
-        // Write controls
         View llWriteControls = findViewById(R.id.llWriteControls);
         View btnWriteDelete = findViewById(R.id.btnWriteDelete);
         View btnWriteAgain = findViewById(R.id.btnWriteAgain);
 
         wordText = getIntent().getStringExtra("WORD_TEXT");
         imagePath = getIntent().getStringExtra("IMAGE_PATH");
-        String sourcePage = getIntent().getStringExtra("SOURCE_PAGE");
+        sourcePage = getIntent().getStringExtra("SOURCE_PAGE");
 
         if (wordText != null) tvWord.setText(wordText);
         if (imagePath != null) ivPicture.setImageURI(Uri.parse(imagePath));
 
         // ==========================================
-        // 🌟 SMART VISIBILITY LOGIC
+        // 🌟 SMART VISIBILITY LOGIC (EXPLOIT FIXED)
         // ==========================================
         if ("ALMANAC".equals(sourcePage)) {
-            // Child mode: Hide edit buttons!
             if (llScanControls != null) llScanControls.setVisibility(View.GONE);
             if (llWriteControls != null) llWriteControls.setVisibility(View.GONE);
             if (layoutEditButtons != null) layoutEditButtons.setVisibility(View.GONE);
             if (btnSpeak != null) btnSpeak.setVisibility(View.VISIBLE);
 
         } else if ("EDIT_ALMANAC".equals(sourcePage)) {
-            // Admin mode: Show edit buttons!
             if (llScanControls != null) llScanControls.setVisibility(View.GONE);
             if (llWriteControls != null) llWriteControls.setVisibility(View.GONE);
             if (layoutEditButtons != null) layoutEditButtons.setVisibility(View.VISIBLE);
             if (btnSpeak != null) btnSpeak.setVisibility(View.VISIBLE);
 
         } else if ("SCANNER".equals(sourcePage)) {
-            // Scan mode: Show Scan Controls!
             if (layoutEditButtons != null) layoutEditButtons.setVisibility(View.GONE);
             if (llWriteControls != null) llWriteControls.setVisibility(View.GONE);
             if (llScanControls != null) llScanControls.setVisibility(View.VISIBLE);
+
+            // 🚀 EXPLOIT SEALED: Forcibly hide the delete button in Scanner Mode
+            if (btnScanDelete != null) btnScanDelete.setVisibility(View.GONE);
+
             if (btnSpeak != null) btnSpeak.setVisibility(View.VISIBLE);
 
         } else if ("WRITE".equals(sourcePage)) {
             if (layoutEditButtons != null) layoutEditButtons.setVisibility(View.GONE);
             if (llScanControls != null) llScanControls.setVisibility(View.GONE);
             if (llWriteControls != null) llWriteControls.setVisibility(View.VISIBLE);
+
+            // 🚀 EXPLOIT SEALED: Forcibly hide the delete button in Write Mode
+            if (btnWriteDelete != null) btnWriteDelete.setVisibility(View.GONE);
+
             if (btnSpeak != null) btnSpeak.setVisibility(View.VISIBLE);
 
         } else {
@@ -125,9 +130,6 @@ public class WordDetailActivity extends AppCompatActivity {
             if (llWriteControls != null) llWriteControls.setVisibility(View.GONE);
         }
 
-        // ==========================================
-        // 🚀 TTS Fix (from previous session)
-        // ==========================================
         textToSpeech = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 int result = textToSpeech.setLanguage(Locale.US);
@@ -225,12 +227,10 @@ public class WordDetailActivity extends AppCompatActivity {
             });
         }
 
-        // Handle Delete Routing safely to your database deletion method
         if (btnDelete != null) btnDelete.setOnClickListener(v -> showCustomDeleteDialog());
         if (btnWriteDelete != null) btnWriteDelete.setOnClickListener(v -> showCustomDeleteDialog());
         if (btnScanDelete != null) btnScanDelete.setOnClickListener(v -> showCustomDeleteDialog());
 
-        // Handle Back/Again functions
         if (btnScanAgain != null) btnScanAgain.setOnClickListener(v -> finish());
         if (btnWriteAgain != null) btnWriteAgain.setOnClickListener(v -> finish());
         if (btnBack != null) btnBack.setOnClickListener(v -> finish());
@@ -269,14 +269,10 @@ public class WordDetailActivity extends AppCompatActivity {
             WordEntry entry = AppDatabase.getInstance(this).wordDao().findWordForProfile(wordText, player);
             if (entry != null) {
                 AppDatabase.getInstance(this).wordDao().delete(entry);
-                AppDatabase.getInstance(this).logDao().insertLog(new LogEntry("DELETED WORD", "Word: " + entry.word + " (Profile: " + entry.profileName + ")", System.currentTimeMillis()));
-            }
 
-            if (imagePath != null) {
-                java.io.File file = new java.io.File(imagePath);
-                if (file.exists()) {
-                    file.delete();
-                }
+                String deleterName = "EDIT_ALMANAC".equals(sourcePage) ? "Admin" : player;
+                String logDetails = entry.word + "|" + entry.imagePath + "|" + entry.profileName + "|" + deleterName;
+                AppDatabase.getInstance(this).logDao().insertLog(new LogEntry("DELETED WORD", logDetails, System.currentTimeMillis()));
             }
 
             runOnUiThread(() -> {

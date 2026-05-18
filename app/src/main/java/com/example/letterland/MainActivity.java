@@ -79,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
                 // Clear the active profile so no one is logged in by default
                 prefs.edit().putString("ACTIVE_PROFILE", "").apply();
 
-                // 🚀 Tell ProfilesActivity that this is a forced login!
+                // Tell ProfilesActivity that this is a forced login!
                 Intent startupIntent = new Intent(MainActivity.this, ProfilesActivity.class);
                 startupIntent.putExtra("IS_MANDATORY_LOGIN", true);
                 startActivity(startupIntent);
@@ -96,6 +96,12 @@ public class MainActivity extends AppCompatActivity {
 
                 prefs.edit().putStringSet("ALL_PROFILES", newProfiles).apply();
                 prefs.edit().putString("ACTIVE_PROFILE", newName).apply();
+
+                // 🚀 FIX: Log the very first profile creation to the database!
+                databaseExecutor.execute(() -> {
+                    LogEntry log = new LogEntry("PLAYER_LOG", "ADDED|" + newName, System.currentTimeMillis());
+                    AppDatabase.getInstance(MainActivity.this).logDao().insertLog(log);
+                });
 
                 updatePlayerBadge();
 
@@ -147,32 +153,22 @@ public class MainActivity extends AppCompatActivity {
             startActivity(new Intent(MainActivity.this, ProfilesActivity.class));
         });
 
-        // ==========================================
-        // --- FOOLPROOF ADMIN BUTTON STYLING ---
-        // ==========================================
-
-        // 1. Create a background that is ALREADY a perfect white circle
+        // Admin Button Styling
         android.graphics.drawable.GradientDrawable whiteCircle = new android.graphics.drawable.GradientDrawable();
         whiteCircle.setShape(android.graphics.drawable.GradientDrawable.OVAL);
         whiteCircle.setColor(Color.WHITE);
         btnAdmin.setBackground(whiteCircle);
 
-        // 2. Guarantee a perfect circular shape mask (50% RelativeCornerSize)
         btnAdmin.setShapeAppearanceModel(new ShapeAppearanceModel()
                 .toBuilder()
                 .setAllCornerSizes(new com.google.android.material.shape.RelativeCornerSize(0.5f))
                 .build());
 
-        // 3. Add your blue border
         btnAdmin.setStrokeColor(ColorStateList.valueOf(Color.parseColor("#29B6F6")));
         btnAdmin.setStrokeWidth(5f);
-
-        // 4. Set your school logo and give it padding inside the circle
         btnAdmin.setImageResource(R.drawable.admin_pic);
         btnAdmin.setScaleType(ImageView.ScaleType.FIT_CENTER);
         btnAdmin.setPadding(15, 15, 15, 15);
-
-        // ==========================================
 
         btnAdmin.setOnClickListener(v -> {
             soundManager.playClick();
@@ -397,7 +393,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
 
-        // Prevent window leak crashes when destroying activity
         if (playOptionsDialog != null && playOptionsDialog.isShowing()) playOptionsDialog.dismiss();
         if (exitDialog != null && exitDialog.isShowing()) exitDialog.dismiss();
         if (adminPinDialog != null && adminPinDialog.isShowing()) adminPinDialog.dismiss();

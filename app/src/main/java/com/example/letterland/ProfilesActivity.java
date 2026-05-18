@@ -142,7 +142,6 @@ public class ProfilesActivity extends AppCompatActivity {
                 .show();
     }
 
-    // 🌟 NEW METHOD: Handles the entire renaming process safely
     private void showRenameProfileDialog(String oldProfileName) {
         EditText input = new EditText(this);
         input.setText(oldProfileName);
@@ -154,7 +153,6 @@ public class ProfilesActivity extends AppCompatActivity {
                 .setPositiveButton("Save", (dialog, which) -> {
                     String newName = input.getText().toString().trim().toUpperCase();
 
-                    // Validation
                     if (newName.isEmpty() || newName.equals(oldProfileName)) return;
 
                     Set<String> oldProfiles = prefs.getStringSet("ALL_PROFILES", new HashSet<>());
@@ -163,31 +161,28 @@ public class ProfilesActivity extends AppCompatActivity {
                         return;
                     }
 
-                    // Update Profile List
                     Set<String> newProfiles = new HashSet<>(oldProfiles);
                     newProfiles.remove(oldProfileName);
                     newProfiles.add(newName);
                     prefs.edit().putStringSet("ALL_PROFILES", newProfiles).apply();
 
-                    // Update Active Session
                     if (oldProfileName.equals(prefs.getString("ACTIVE_PROFILE", ""))) {
                         prefs.edit().putString("ACTIVE_PROFILE", newName).apply();
                     }
 
-                    // Migrate Avatar Path
                     String avatarPath = prefs.getString("AVATAR_" + oldProfileName, null);
                     if (avatarPath != null) {
                         prefs.edit().putString("AVATAR_" + newName, avatarPath).apply();
                         prefs.edit().remove("AVATAR_" + oldProfileName).apply();
                     }
 
-                    // Database Operations in Background Thread
                     new Thread(() -> {
-                        // Cascade name change to Word Almanac and Quiz History
                         AppDatabase.getInstance(this).wordDao().updateProfileName(oldProfileName, newName);
                         AppDatabase.getInstance(this).quizRecordDao().updateProfileName(oldProfileName, newName);
 
-                        // 🕵️ TRIGGER THE LOG FOR THE ADMIN PANEL
+                        // 🚀 FIX: Automatically updates username details hidden inside historical deleted logs
+                        AppDatabase.getInstance(this).logDao().updateProfileNameInDeletedLogs(oldProfileName, newName);
+
                         recordPlayerLog(newName, "RENAMED_FROM|" + oldProfileName);
 
                         runOnUiThread(() -> {
@@ -200,7 +195,6 @@ public class ProfilesActivity extends AppCompatActivity {
                 .show();
     }
 
-    // Database Log Method
     private void recordPlayerLog(String playerName, String logType) {
         new Thread(() -> {
             long timestamp = System.currentTimeMillis();
@@ -246,14 +240,12 @@ public class ProfilesActivity extends AppCompatActivity {
                 cardView.setStrokeWidth(3);
             }
 
-            // Click Avatar to change picture
             holder.ivAvatar.setOnClickListener(v -> {
                 SoundManager.getInstance(ProfilesActivity.this).playClick();
                 profileAwaitingImage = profileName;
                 pickAvatarLauncher.launch("image/*");
             });
 
-            // Click whole card to login
             holder.itemView.setOnClickListener(v -> {
                 SoundManager.getInstance(ProfilesActivity.this).playClick();
                 prefs.edit().putString("ACTIVE_PROFILE", profileName).apply();
@@ -261,13 +253,11 @@ public class ProfilesActivity extends AppCompatActivity {
                 finish();
             });
 
-            // 🌟 NEW EDIT BUTTON LISTENER
             holder.btnEditProfile.setOnClickListener(v -> {
                 SoundManager.getInstance(ProfilesActivity.this).playClick();
                 showRenameProfileDialog(profileName);
             });
 
-            // Click Delete
             holder.btnDeleteProfile.setOnClickListener(v -> {
                 SoundManager.getInstance(ProfilesActivity.this).playClick();
                 new AlertDialog.Builder(ProfilesActivity.this)
@@ -305,14 +295,14 @@ public class ProfilesActivity extends AppCompatActivity {
         class ProfileViewHolder extends RecyclerView.ViewHolder {
             TextView tvProfileName;
             ImageView ivAvatar;
-            ImageButton btnEditProfile; // 🌟 ADDED TO VIEWHOLDER
+            ImageButton btnEditProfile;
             ImageButton btnDeleteProfile;
 
             public ProfileViewHolder(@NonNull View itemView) {
                 super(itemView);
                 tvProfileName = itemView.findViewById(R.id.tvProfileName);
                 ivAvatar = itemView.findViewById(R.id.ivAvatar);
-                btnEditProfile = itemView.findViewById(R.id.btnEditProfile); // 🌟 LINKED TO XML ID
+                btnEditProfile = itemView.findViewById(R.id.btnEditProfile);
                 btnDeleteProfile = itemView.findViewById(R.id.btnDeleteProfile);
             }
         }
