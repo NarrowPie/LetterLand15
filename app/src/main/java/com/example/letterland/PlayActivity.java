@@ -68,7 +68,6 @@ public class PlayActivity extends AppCompatActivity {
 
     private ExecutorService cameraExecutor;
 
-    // 🛡️ Leak Tracker for Dialog
     private AlertDialog newWordDialog;
 
     private final ActivityResultLauncher<Void> takePictureLauncher = registerForActivityResult(
@@ -187,6 +186,7 @@ public class PlayActivity extends AppCompatActivity {
                         intent.putExtra("WORD_TEXT", savedWord.word);
                         intent.putExtra("IMAGE_PATH", savedWord.imagePath);
                         intent.putExtra("SOURCE_PAGE", "SCANNER");
+                        intent.putExtra("IS_NEW_WORD", false); // 🌟 PREVENTS DELETION EXPLOIT
                         startActivity(intent);
                     } else {
                         View dialogView = LayoutInflater.from(PlayActivity.this).inflate(R.layout.dialog_new_word, null);
@@ -255,7 +255,7 @@ public class PlayActivity extends AppCompatActivity {
         ColorMatrix colorMatrix = new ColorMatrix();
         colorMatrix.setSaturation(0);
 
-        float contrast = 2.0f; // 200% contrast
+        float contrast = 2.0f;
         float translate = (-0.5f * contrast + 0.5f) * 255f;
         ColorMatrix contrastMatrix = new ColorMatrix(new float[] {
                 contrast, 0, 0, 0, translate,
@@ -427,6 +427,7 @@ public class PlayActivity extends AppCompatActivity {
                 intent.putExtra("WORD_TEXT", word);
                 intent.putExtra("IMAGE_PATH", file.getAbsolutePath());
                 intent.putExtra("SOURCE_PAGE", "SCANNER");
+                intent.putExtra("IS_NEW_WORD", true); // 🌟 ALLOWS DELETING JUST THIS ONCE
                 startActivity(intent);
             });
         } catch (java.io.IOException e) {
@@ -487,8 +488,6 @@ public class PlayActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
-        // 🛡️ Prevent window leak crash
         if (newWordDialog != null && newWordDialog.isShowing()) {
             newWordDialog.dismiss();
         }

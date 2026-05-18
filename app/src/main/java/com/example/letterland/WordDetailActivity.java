@@ -11,6 +11,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
@@ -86,11 +87,13 @@ public class WordDetailActivity extends AppCompatActivity {
         imagePath = getIntent().getStringExtra("IMAGE_PATH");
         sourcePage = getIntent().getStringExtra("SOURCE_PAGE");
 
+        boolean isNewWord = getIntent().getBooleanExtra("IS_NEW_WORD", false);
+
         if (wordText != null) tvWord.setText(wordText);
         if (imagePath != null) ivPicture.setImageURI(Uri.parse(imagePath));
 
         // ==========================================
-        // 🌟 SMART VISIBILITY LOGIC (EXPLOIT FIXED)
+        // 🌟 SMART VISIBILITY LOGIC + UI CENTERING FIX
         // ==========================================
         if ("ALMANAC".equals(sourcePage)) {
             if (llScanControls != null) llScanControls.setVisibility(View.GONE);
@@ -109,8 +112,20 @@ public class WordDetailActivity extends AppCompatActivity {
             if (llWriteControls != null) llWriteControls.setVisibility(View.GONE);
             if (llScanControls != null) llScanControls.setVisibility(View.VISIBLE);
 
-            // 🚀 EXPLOIT SEALED: Forcibly hide the delete button in Scanner Mode
-            if (btnScanDelete != null) btnScanDelete.setVisibility(View.GONE);
+            if (btnScanDelete != null && btnScanAgain != null) {
+                if (isNewWord) {
+                    btnScanDelete.setVisibility(View.VISIBLE);
+                    btnScanDelete.setClickable(true);
+                } else {
+                    btnScanDelete.setVisibility(View.GONE);
+                    btnScanDelete.setClickable(false);
+
+                    // 🌟 THE LAYOUT FIX: Distribute 100% of the weight to the remaining button!
+                    LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) btnScanAgain.getLayoutParams();
+                    params.weight = 1.0f; // This forces it to naturally stretch and fill the space perfectly
+                    btnScanAgain.setLayoutParams(params);
+                }
+            }
 
             if (btnSpeak != null) btnSpeak.setVisibility(View.VISIBLE);
 
@@ -119,8 +134,20 @@ public class WordDetailActivity extends AppCompatActivity {
             if (llScanControls != null) llScanControls.setVisibility(View.GONE);
             if (llWriteControls != null) llWriteControls.setVisibility(View.VISIBLE);
 
-            // 🚀 EXPLOIT SEALED: Forcibly hide the delete button in Write Mode
-            if (btnWriteDelete != null) btnWriteDelete.setVisibility(View.GONE);
+            if (btnWriteDelete != null && btnWriteAgain != null) {
+                if (isNewWord) {
+                    btnWriteDelete.setVisibility(View.VISIBLE);
+                    btnWriteDelete.setClickable(true);
+                } else {
+                    btnWriteDelete.setVisibility(View.GONE);
+                    btnWriteDelete.setClickable(false);
+
+                    // 🌟 THE LAYOUT FIX: Distribute 100% of the weight to the remaining button!
+                    LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) btnWriteAgain.getLayoutParams();
+                    params.weight = 1.0f; // This forces it to naturally stretch and fill the space perfectly
+                    btnWriteAgain.setLayoutParams(params);
+                }
+            }
 
             if (btnSpeak != null) btnSpeak.setVisibility(View.VISIBLE);
 
@@ -270,8 +297,7 @@ public class WordDetailActivity extends AppCompatActivity {
             if (entry != null) {
                 AppDatabase.getInstance(this).wordDao().delete(entry);
 
-                String deleterName = "EDIT_ALMANAC".equals(sourcePage) ? "Admin" : player;
-                String logDetails = entry.word + "|" + entry.imagePath + "|" + entry.profileName + "|" + deleterName;
+                String logDetails = entry.word + "|" + entry.imagePath + "|" + entry.profileName;
                 AppDatabase.getInstance(this).logDao().insertLog(new LogEntry("DELETED WORD", logDetails, System.currentTimeMillis()));
             }
 

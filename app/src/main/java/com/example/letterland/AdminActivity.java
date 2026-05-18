@@ -15,16 +15,6 @@ import com.google.android.material.button.MaterialButton;
 public class AdminActivity extends AppCompatActivity {
 
     private long lastClickTime = 0;
-
-    private MaterialButton btnAdminBack;
-    private MaterialButton btnAdminUserLogs;
-    private MaterialButton btnAdminPlayerLogs; // 🌟 ADDED OUR NEW BUTTON HERE
-    private MaterialButton btnAdminQuizRecord;
-    private MaterialButton btnAdminAddObject;
-    private MaterialButton btnAdminDeletedLogs;
-    private MaterialButton btnAdminEditAlmanac;
-    private MaterialButton btnResetPin;
-
     private AlertDialog pinDialog;
 
     @Override
@@ -32,23 +22,29 @@ public class AdminActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin);
 
-        // Link UI
-        btnAdminBack = findViewById(R.id.btnAdminBack);
-        btnAdminUserLogs = findViewById(R.id.btnAdminUserLogs);
-        btnAdminPlayerLogs = findViewById(R.id.btnAdminPlayerLogs); // 🌟 LINKED IT TO THE XML
-        btnAdminQuizRecord = findViewById(R.id.btnAdminQuizRecord);
-        btnAdminAddObject = findViewById(R.id.btnAdminAddObject);
-        btnAdminDeletedLogs = findViewById(R.id.btnAdminDeletedLogs);
-        btnAdminEditAlmanac = findViewById(R.id.btnAdminEditAlmanac);
-        btnResetPin = findViewById(R.id.btnResetPin);
+        // 🌟 FIX: Correctly mapped as MaterialButtons to prevent the app from crashing!
+        MaterialButton btnBack = findViewById(R.id.btnBack);
+        MaterialButton btnChangePin = findViewById(R.id.btnChangePin);
+        MaterialButton btnAdminUserLogs = findViewById(R.id.btnAdminUserLogs);
+        MaterialButton btnAdminPlayerLogs = findViewById(R.id.btnAdminPlayerLogs);
+        MaterialButton btnQuizScores = findViewById(R.id.btnQuizScores);
+        MaterialButton btnAdminAddObject = findViewById(R.id.btnAdminAddObject);
+        MaterialButton btnEditAlmanac = findViewById(R.id.btnEditAlmanac);
+        MaterialButton btnDeletedLogs = findViewById(R.id.btnDeletedLogs);
 
-        btnAdminBack.setOnClickListener(v -> {
+        btnBack.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
             finish();
         });
 
-        // 1. History Logs
+        btnChangePin.setOnClickListener(v -> {
+            if (isSpamClick()) return;
+            SoundManager.getInstance(this).playClick();
+            showChangePinDialog();
+        });
+
+        // 🌟 FIX: All clicks are handled strictly here now. No more double-click sounds!
         btnAdminUserLogs.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
@@ -57,16 +53,13 @@ public class AdminActivity extends AppCompatActivity {
             }
         });
 
-        // 🌟 2. OUR NEW CLICK EVENT: Open the Player Logs Screen!
         btnAdminPlayerLogs.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
-            // This opens the new java file we are about to create below!
             startActivity(new Intent(AdminActivity.this, PlayerLogsActivity.class));
         });
 
-        // 3. Quiz Records
-        btnAdminQuizRecord.setOnClickListener(v -> {
+        btnQuizScores.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
             if (hasActiveProfile()) {
@@ -74,7 +67,6 @@ public class AdminActivity extends AppCompatActivity {
             }
         });
 
-        // 4. Add Object
         btnAdminAddObject.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
@@ -83,15 +75,7 @@ public class AdminActivity extends AppCompatActivity {
             }
         });
 
-        // 5. Deleted Logs
-        btnAdminDeletedLogs.setOnClickListener(v -> {
-            if (isSpamClick()) return;
-            SoundManager.getInstance(this).playClick();
-            startActivity(new Intent(AdminActivity.this, DeletedLogsActivity.class));
-        });
-
-        // 6. Edit Almanac
-        btnAdminEditAlmanac.setOnClickListener(v -> {
+        btnEditAlmanac.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
             if (hasActiveProfile()) {
@@ -99,19 +83,19 @@ public class AdminActivity extends AppCompatActivity {
             }
         });
 
-        // 7. Reset Pin
-        btnResetPin.setOnClickListener(v -> {
+        btnDeletedLogs.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
-            showResetPinDialog();
+            startActivity(new Intent(AdminActivity.this, DeletedLogsActivity.class));
         });
     }
 
     private boolean isSpamClick() {
-        if (android.os.SystemClock.elapsedRealtime() - lastClickTime < 1000) {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastClickTime < 500) {
             return true;
         }
-        lastClickTime = android.os.SystemClock.elapsedRealtime();
+        lastClickTime = currentTime;
         return false;
     }
 
@@ -126,7 +110,7 @@ public class AdminActivity extends AppCompatActivity {
         return true;
     }
 
-    private void showResetPinDialog() {
+    private void showChangePinDialog() {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_reset_pin, null);
         pinDialog = new AlertDialog.Builder(this)
                 .setView(dialogView)

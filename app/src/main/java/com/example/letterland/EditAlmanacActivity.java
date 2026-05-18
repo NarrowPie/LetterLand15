@@ -107,7 +107,8 @@ public class EditAlmanacActivity extends AppCompatActivity {
                             db.wordDao().delete(word);
 
                             // 🚀 2. THE FIX: Log with exact format: Word | Image | Collector | Deleter
-                            String logDetails = word.word + "|" + word.imagePath + "|" + word.profileName + "|Admin";
+                            // 🚀 THE FIX: Log with exact 3-part format: Word | Image | Collector
+                            String logDetails = word.word + "|" + word.imagePath + "|" + word.profileName;
                             db.logDao().insertLog(new LogEntry("DELETED WORD", logDetails, System.currentTimeMillis()));
 
                             // 🚀 3. THE FIX: DO NOT delete the physical file!

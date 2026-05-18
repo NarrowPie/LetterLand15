@@ -40,7 +40,6 @@ public class WriteActivity extends AppCompatActivity {
 
     private DigitalInkRecognizer recognizer;
 
-    // TTS Variables
     private TextToSpeech textToSpeech;
     private boolean isTtsReady = false;
 
@@ -50,7 +49,6 @@ public class WriteActivity extends AppCompatActivity {
     private final Handler scanHandler = new Handler(Looper.getMainLooper());
     private Runnable scanRunnable;
 
-    // 🛡️ Leak Tracker for Dialog
     private AlertDialog newWordDialog;
 
     private final ActivityResultLauncher<Void> takePictureLauncher = registerForActivityResult(
@@ -79,7 +77,6 @@ public class WriteActivity extends AppCompatActivity {
 
         btnBack.setOnClickListener(v -> finish());
 
-        // Initialize TextToSpeech
         textToSpeech = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 int result = textToSpeech.setLanguage(Locale.US);
@@ -91,7 +88,6 @@ public class WriteActivity extends AppCompatActivity {
             }
         });
 
-        // 🌟 Audio Ducking Listener
         textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
             @Override
             public void onStart(String utteranceId) {
@@ -109,7 +105,6 @@ public class WriteActivity extends AppCompatActivity {
             }
         });
 
-        // Read Aloud Button Logic
         btnSpeakLiveText.setOnClickListener(v -> {
             if (!isTtsReady) {
                 Toast.makeText(this, "Voice is loading...", Toast.LENGTH_SHORT).show();
@@ -261,6 +256,7 @@ public class WriteActivity extends AppCompatActivity {
                     intent.putExtra("WORD_TEXT", savedWord.word);
                     intent.putExtra("IMAGE_PATH", savedWord.imagePath);
                     intent.putExtra("SOURCE_PAGE", "WRITE");
+                    intent.putExtra("IS_NEW_WORD", false); // 🌟 PREVENTS DELETION EXPLOIT
                     startActivity(intent);
                     resetCanvasAndText();
                 } else {
@@ -329,6 +325,7 @@ public class WriteActivity extends AppCompatActivity {
                 intent.putExtra("WORD_TEXT", word);
                 intent.putExtra("IMAGE_PATH", file.getAbsolutePath());
                 intent.putExtra("SOURCE_PAGE", "WRITE");
+                intent.putExtra("IS_NEW_WORD", true); // 🌟 ALLOWS DELETING JUST THIS ONCE
                 startActivity(intent);
 
                 resetCanvasAndText();
@@ -340,17 +337,13 @@ public class WriteActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        // Clean up TextToSpeech memory
         if (textToSpeech != null) {
             textToSpeech.stop();
             textToSpeech.shutdown();
         }
-
-        // 🛡️ Prevent window leak crash
         if (newWordDialog != null && newWordDialog.isShowing()) {
             newWordDialog.dismiss();
         }
-
         super.onDestroy();
         SoundManager.getInstance(this).stopScratchSound();
         if (scanRunnable != null) {
