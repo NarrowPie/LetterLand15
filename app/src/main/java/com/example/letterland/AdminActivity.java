@@ -14,18 +14,17 @@ import com.google.android.material.button.MaterialButton;
 
 public class AdminActivity extends AppCompatActivity {
 
-    // 🚀 Tracks the time of the last click to prevent spamming
     private long lastClickTime = 0;
 
     private MaterialButton btnAdminBack;
     private MaterialButton btnAdminUserLogs;
+    private MaterialButton btnAdminPlayerLogs; // 🌟 ADDED OUR NEW BUTTON HERE
     private MaterialButton btnAdminQuizRecord;
     private MaterialButton btnAdminAddObject;
     private MaterialButton btnAdminDeletedLogs;
     private MaterialButton btnAdminEditAlmanac;
     private MaterialButton btnResetPin;
 
-    // Memory leak protection
     private AlertDialog pinDialog;
 
     @Override
@@ -36,20 +35,20 @@ public class AdminActivity extends AppCompatActivity {
         // Link UI
         btnAdminBack = findViewById(R.id.btnAdminBack);
         btnAdminUserLogs = findViewById(R.id.btnAdminUserLogs);
+        btnAdminPlayerLogs = findViewById(R.id.btnAdminPlayerLogs); // 🌟 LINKED IT TO THE XML
         btnAdminQuizRecord = findViewById(R.id.btnAdminQuizRecord);
         btnAdminAddObject = findViewById(R.id.btnAdminAddObject);
         btnAdminDeletedLogs = findViewById(R.id.btnAdminDeletedLogs);
         btnAdminEditAlmanac = findViewById(R.id.btnAdminEditAlmanac);
         btnResetPin = findViewById(R.id.btnResetPin);
 
-        // Back Button
         btnAdminBack.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
             finish();
         });
 
-        // 1. OPEN HISTORY LOGS SCREEN (LOCKED)
+        // 1. History Logs
         btnAdminUserLogs.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
@@ -58,7 +57,15 @@ public class AdminActivity extends AppCompatActivity {
             }
         });
 
-        // 2. OPEN QUIZ RECORD SCREEN (LOCKED)
+        // 🌟 2. OUR NEW CLICK EVENT: Open the Player Logs Screen!
+        btnAdminPlayerLogs.setOnClickListener(v -> {
+            if (isSpamClick()) return;
+            SoundManager.getInstance(this).playClick();
+            // This opens the new java file we are about to create below!
+            startActivity(new Intent(AdminActivity.this, PlayerLogsActivity.class));
+        });
+
+        // 3. Quiz Records
         btnAdminQuizRecord.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
@@ -67,7 +74,7 @@ public class AdminActivity extends AppCompatActivity {
             }
         });
 
-        // 3. OPEN ADD OBJECT SCREEN (LOCKED)
+        // 4. Add Object
         btnAdminAddObject.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
@@ -76,14 +83,14 @@ public class AdminActivity extends AppCompatActivity {
             }
         });
 
-        // 4. OPEN DELETED LOGS SCREEN (UNLOCKED - System wide)
+        // 5. Deleted Logs
         btnAdminDeletedLogs.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
             startActivity(new Intent(AdminActivity.this, DeletedLogsActivity.class));
         });
 
-        // 5. OPEN EDIT ALMANAC SCREEN (LOCKED)
+        // 6. Edit Almanac
         btnAdminEditAlmanac.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
@@ -92,7 +99,7 @@ public class AdminActivity extends AppCompatActivity {
             }
         });
 
-        // 6. RESET PIN LOGIC (UNLOCKED - System wide)
+        // 7. Reset Pin
         btnResetPin.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
@@ -100,16 +107,14 @@ public class AdminActivity extends AppCompatActivity {
         });
     }
 
-    // 🚀 NEW ANTI-SPAM METHOD 🚀
     private boolean isSpamClick() {
         if (android.os.SystemClock.elapsedRealtime() - lastClickTime < 1000) {
-            return true; // It's a spam click! Ignore it.
+            return true;
         }
         lastClickTime = android.os.SystemClock.elapsedRealtime();
         return false;
     }
 
-    // 🚀 NEW GATEKEEPER METHOD 🚀
     private boolean hasActiveProfile() {
         SharedPreferences prefs = getSharedPreferences("LetterLandMemory", MODE_PRIVATE);
         String activePlayer = prefs.getString("ACTIVE_PROFILE", "");

@@ -69,6 +69,10 @@
             android:name=".AdminActivity"
             android:screenOrientation="portrait" />
         <activity
+            android:name=".PlayerLogsActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+        <activity
             android:name=".UserLogsActivity"
             android:screenOrientation="portrait" />
         <activity

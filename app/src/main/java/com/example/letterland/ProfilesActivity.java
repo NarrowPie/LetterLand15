@@ -30,9 +30,8 @@ public class ProfilesActivity extends AppCompatActivity {
     private RecyclerView rvProfiles;
     private ProfileAdapter adapter;
     private SharedPreferences prefs;
-    private String profileAwaitingImage = ""; // Remembers who we are picking a picture for!
+    private String profileAwaitingImage = "";
 
-    // 📸 THE IMAGE PICKER
     private final ActivityResultLauncher<String> pickAvatarLauncher = registerForActivityResult(
             new ActivityResultContracts.GetContent(),
             uri -> {
@@ -58,18 +57,13 @@ public class ProfilesActivity extends AppCompatActivity {
         rvProfiles.setLayoutManager(new LinearLayoutManager(this));
 
         ExtendedFloatingActionButton fabAddProfile = findViewById(R.id.fabAddProfile);
-
-        // 🔙 SET UP THE BACK BUTTON & BEHAVIOR
         ImageButton btnBack = findViewById(R.id.btnBackProfiles);
 
-        // 🚀 CHECK THE SECRET MESSAGE FROM MAIN ACTIVITY
         boolean isMandatoryLogin = getIntent().getBooleanExtra("IS_MANDATORY_LOGIN", false);
 
         if (isMandatoryLogin) {
-            // It's a startup login: Hide the in-app back button completely!
             btnBack.setVisibility(View.GONE);
         } else {
-            // Opened from the menu: Show it and let it close the screen normally
             btnBack.setVisibility(View.VISIBLE);
             btnBack.setOnClickListener(v -> {
                 SoundManager.getInstance(this).playClick();
@@ -77,15 +71,12 @@ public class ProfilesActivity extends AppCompatActivity {
             });
         }
 
-        // 🚀 HANDLE THE PHYSICAL PHONE BACK BUTTON
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
                 if (isMandatoryLogin) {
-                    // They tried to back out of the mandatory login -> Quit the entire app!
                     finishAffinity();
                 } else {
-                    // They are just changing profiles -> Return to the main menu normally
                     finish();
                 }
             }
@@ -94,7 +85,7 @@ public class ProfilesActivity extends AppCompatActivity {
         loadProfiles();
 
         fabAddProfile.setOnClickListener(v -> {
-            SoundManager.getInstance(ProfilesActivity.this).playClick(); // Pop sound!
+            SoundManager.getInstance(ProfilesActivity.this).playClick();
             showAddProfileDialog();
         });
     }
@@ -106,20 +97,20 @@ public class ProfilesActivity extends AppCompatActivity {
         rvProfiles.setAdapter(adapter);
     }
 
-    // 💾 SAVES THE CHOSEN PICTURE TO THE PHONE
     private void saveAvatarToStorage(String profileName, Bitmap bitmap) {
         String fileName = "avatar_" + profileName + ".jpg";
         java.io.File file = new java.io.File(getExternalFilesDir(null), fileName);
 
         try (java.io.FileOutputStream out = new java.io.FileOutputStream(file)) {
             bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
-
-            // Save the file path to memory so the app remembers it!
             prefs.edit().putString("AVATAR_" + profileName, file.getAbsolutePath()).apply();
+
+            // 🌟 LOG SAVED HERE: Avatar Changed
+            recordPlayerLog(profileName, "EDITED");
 
             runOnUiThread(() -> {
                 Toast.makeText(this, "Profile picture updated!", Toast.LENGTH_SHORT).show();
-                loadProfiles(); // Refresh the list to show the new picture
+                loadProfiles();
             });
         } catch (Exception e) {
             e.printStackTrace();
@@ -142,6 +133,10 @@ public class ProfilesActivity extends AppCompatActivity {
                         newProfiles.add(newName);
 
                         prefs.edit().putStringSet("ALL_PROFILES", newProfiles).apply();
+
+                        // 🌟 LOG SAVED HERE: New Profile Added
+                        recordPlayerLog(newName, "ADDED");
+
                         loadProfiles();
                     }
                 })
@@ -149,9 +144,17 @@ public class ProfilesActivity extends AppCompatActivity {
                 .show();
     }
 
-    // ==========================================
-    // THE LIST ADAPTER
-    // ==========================================
+    // 🌟 THE DATABASE RECORDER METHOD
+    private void recordPlayerLog(String playerName, String logType) {
+        new Thread(() -> {
+            long timestamp = System.currentTimeMillis();
+            // We save it as action="PLAYER_LOG" so we don't mix it with scanned word logs.
+            // details="ADDED|Alice" so we can split it later!
+            LogEntry log = new LogEntry("PLAYER_LOG", logType + "|" + playerName, timestamp);
+            AppDatabase.getInstance(this).logDao().insertLog(log);
+        }).start();
+    }
+
     private class ProfileAdapter extends RecyclerView.Adapter<ProfileAdapter.ProfileViewHolder> {
         private final List<String> profiles;
 
@@ -171,51 +174,39 @@ public class ProfilesActivity extends AppCompatActivity {
             String profileName = profiles.get(position);
             holder.tvProfileName.setText(profileName);
 
-            // 🖼️ LOAD THE PROFILE PICTURE (Or show default if they don't have one)
             String avatarPath = prefs.getString("AVATAR_" + profileName, null);
             if (avatarPath != null) {
                 holder.ivAvatar.setImageURI(android.net.Uri.parse(avatarPath));
             } else {
                 holder.ivAvatar.setImageResource(R.drawable.admin_pic);
-                // Your default logo
             }
 
-            // ⭐ HIGHLIGHT THE ACTIVE PLAYER!
             String activePlayer = prefs.getString("ACTIVE_PROFILE", "");
             com.google.android.material.card.MaterialCardView cardView = (com.google.android.material.card.MaterialCardView) holder.itemView;
 
             if (profileName.equals(activePlayer)) {
-                // If this is the playing kid, make their card bold green!
                 cardView.setStrokeColor(android.graphics.Color.parseColor("#4CAF50"));
                 cardView.setStrokeWidth(8);
             } else {
-                // Otherwise, normal blue border
                 cardView.setStrokeColor(android.graphics.Color.parseColor("#29B6F6"));
                 cardView.setStrokeWidth(3);
             }
 
-            // 👆 TAP THE PICTURE TO CHANGE IT
             holder.ivAvatar.setOnClickListener(v -> {
                 SoundManager.getInstance(ProfilesActivity.this).playClick();
                 profileAwaitingImage = profileName;
                 pickAvatarLauncher.launch("image/*");
             });
 
-            // 1. SELECT A PROFILE TO PLAY
             holder.itemView.setOnClickListener(v -> {
-                SoundManager.getInstance(ProfilesActivity.this).playClick(); // Pop sound!
-
-                // Save them as the active player
+                SoundManager.getInstance(ProfilesActivity.this).playClick();
                 prefs.edit().putString("ACTIVE_PROFILE", profileName).apply();
                 Toast.makeText(ProfilesActivity.this, profileName + " is now playing!", Toast.LENGTH_SHORT).show();
-
-                // Automatically close this screen and return to MainActivity
                 finish();
             });
 
-            // --- FIXED DELETE A PROFILE LOGIC ---
             holder.btnDeleteProfile.setOnClickListener(v -> {
-                SoundManager.getInstance(ProfilesActivity.this).playClick(); // Pop sound!
+                SoundManager.getInstance(ProfilesActivity.this).playClick();
                 new AlertDialog.Builder(ProfilesActivity.this)
                         .setTitle("Delete " + profileName + "?")
                         .setMessage("Are you sure?")
@@ -224,16 +215,16 @@ public class ProfilesActivity extends AppCompatActivity {
                             Set<String> newProfiles = new HashSet<>(oldProfiles);
                             newProfiles.remove(profileName);
                             prefs.edit().putStringSet("ALL_PROFILES", newProfiles).apply();
-                            prefs.edit().remove("AVATAR_" + profileName).apply(); // Delete picture link
+                            prefs.edit().remove("AVATAR_" + profileName).apply();
 
-                            // BUG FIX: Switch to another profile if the active one was deleted
+                            // 🌟 LOG SAVED HERE: Profile Deleted
+                            recordPlayerLog(profileName, "DELETED");
+
                             if (profileName.equals(prefs.getString("ACTIVE_PROFILE", ""))) {
                                 if (!newProfiles.isEmpty()) {
-                                    // Grab any available profile (e.g., "Sweet") and make it active
                                     String fallbackProfile = newProfiles.iterator().next();
                                     prefs.edit().putString("ACTIVE_PROFILE", fallbackProfile).apply();
                                 } else {
-                                    // No profiles left, set to empty
                                     prefs.edit().putString("ACTIVE_PROFILE", "").apply();
                                 }
                             }

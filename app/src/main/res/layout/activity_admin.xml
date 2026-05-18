@@ -105,6 +105,34 @@
                 app:cardElevation="4dp">
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAdminPlayerLogs"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/kid_font"
+                    android:gravity="start|center_vertical"
+                    android:lineSpacingExtra="4dp"
+                    android:minHeight="85dp"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:text="USER LOGS\n(Player Activity)"
+                    android:textColor="#009688"
+                    app:backgroundTint="#E0F2F1"
+                    app:icon="@android:drawable/ic_menu_view"
+                    app:iconGravity="start"
+                    app:iconPadding="16dp"
+                    app:iconSize="32dp"
+                    app:iconTint="#009688" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="8dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnAdminQuizRecord"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="match_parent"
