@@ -44,6 +44,7 @@ public class AdminActivity extends AppCompatActivity {
             showChangePinDialog();
         });
 
+        // 🌟 FIX: The buttons are alive again! Safely routed through the Java listener.
         btnAdminUserLogs.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
@@ -52,6 +53,7 @@ public class AdminActivity extends AppCompatActivity {
             }
         });
 
+        // 🌟 FIX: The buttons are alive again!
         btnAdminPlayerLogs.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
@@ -89,6 +91,7 @@ public class AdminActivity extends AppCompatActivity {
         });
     }
 
+    // Prevents double-taps and double-sounds
     private boolean isSpamClick() {
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastClickTime < 500) {

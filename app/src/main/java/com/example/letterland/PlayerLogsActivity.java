@@ -1,9 +1,12 @@
 package com.example.letterland;
 
+import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -32,19 +35,16 @@ public class PlayerLogsActivity extends AppCompatActivity {
     private PlayerLogAdapter adapter;
     private List<LogEntry> allLogs = new ArrayList<>();
 
-    // Buttons
     private MaterialButton btnFilterAll, btnFilterDeleted, btnFilterAdded, btnFilterEdited;
+    private long lastFilterTouchTime = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_player_logs);
 
-        // Header Back Button
-        findViewById(R.id.btnBackPlayerLogs).setOnClickListener(v -> {
-            SoundManager.getInstance(this).playClick();
-            finish();
-        });
+        // Bulletproof Back Button
+        setSafeTouchListener(findViewById(R.id.btnBackPlayerLogs), this::finish);
 
         tvEmptyLogs = findViewById(R.id.tvEmptyLogs);
         rvPlayerLogs = findViewById(R.id.rvPlayerLogs);
@@ -53,18 +53,36 @@ public class PlayerLogsActivity extends AppCompatActivity {
         adapter = new PlayerLogAdapter(new ArrayList<>());
         rvPlayerLogs.setAdapter(adapter);
 
-        // Filter Buttons
         btnFilterAll = findViewById(R.id.btnFilterAll);
         btnFilterDeleted = findViewById(R.id.btnFilterDeleted);
         btnFilterAdded = findViewById(R.id.btnFilterAdded);
         btnFilterEdited = findViewById(R.id.btnFilterEdited);
 
-        btnFilterAll.setOnClickListener(v -> applyFilter("ALL"));
-        btnFilterDeleted.setOnClickListener(v -> applyFilter("DELETED"));
-        btnFilterAdded.setOnClickListener(v -> applyFilter("ADDED"));
-        btnFilterEdited.setOnClickListener(v -> applyFilter("EDITED"));
+        // Bulletproof Filter Buttons
+        setSafeTouchListener(btnFilterAll, () -> applyFilter("ALL"));
+        setSafeTouchListener(btnFilterDeleted, () -> applyFilter("DELETED"));
+        setSafeTouchListener(btnFilterAdded, () -> applyFilter("ADDED"));
+        setSafeTouchListener(btnFilterEdited, () -> applyFilter("EDITED"));
 
         loadLogsFromDatabase();
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void setSafeTouchListener(View view, Runnable action) {
+        view.setOnClickListener(null);
+        view.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastFilterTouchTime < 500) {
+                    return true;
+                }
+                lastFilterTouchTime = currentTime;
+                SoundManager.getInstance(PlayerLogsActivity.this).playClick();
+                action.run();
+                return true;
+            }
+            return false;
+        });
     }
 
     private void loadLogsFromDatabase() {
@@ -72,7 +90,6 @@ public class PlayerLogsActivity extends AppCompatActivity {
             List<LogEntry> rawLogs = AppDatabase.getInstance(this).logDao().getAllLogs();
             allLogs.clear();
 
-            // ONLY grab logs that are specifically Player Activity logs
             for (LogEntry log : rawLogs) {
                 if ("PLAYER_LOG".equals(log.action)) {
                     allLogs.add(log);
@@ -81,19 +98,18 @@ public class PlayerLogsActivity extends AppCompatActivity {
 
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed()) return;
-                applyFilter("ALL"); // Default filter
+                applyFilter("ALL");
             });
         }).start();
     }
 
     private void applyFilter(String filterType) {
-        SoundManager.getInstance(this).playClick();
         List<LogEntry> filteredList = new ArrayList<>();
 
         for (LogEntry log : allLogs) {
             String[] parts = log.details.split("\\|");
             if (parts.length < 2) continue;
-            String type = parts[0]; // "ADDED", "DELETED", "EDITED", "RESTORED"
+            String type = parts[0];
 
             if (filterType.equals("ALL")) {
                 filteredList.add(log);
@@ -123,6 +139,8 @@ public class PlayerLogsActivity extends AppCompatActivity {
         private List<LogEntry> logs;
         private SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy - hh:mm a", Locale.US);
 
+        private long lastRestoreTouchTime = 0;
+
         public PlayerLogAdapter(List<LogEntry> logs) {
             this.logs = logs;
         }
@@ -139,11 +157,11 @@ public class PlayerLogsActivity extends AppCompatActivity {
             return new LogViewHolder(view);
         }
 
+        @SuppressLint("ClickableViewAccessibility")
         @Override
         public void onBindViewHolder(@NonNull LogViewHolder holder, int position) {
             LogEntry log = logs.get(position);
 
-            // Our details string looks like: "ADDED|PlayerName"
             String[] parts = log.details.split("\\|");
             String type = parts.length > 0 ? parts[0] : "UNKNOWN";
             String playerName = parts.length > 1 ? parts[1] : "Unknown Player";
@@ -151,86 +169,98 @@ public class PlayerLogsActivity extends AppCompatActivity {
             holder.tvLogPlayerName.setText(playerName);
             holder.tvLogDate.setText(sdf.format(new Date(log.timestamp)));
 
-            // 🎨 FORMAT ROW BASED ON ACTIVITY TYPE
             if (type.equals("DELETED")) {
                 holder.tvLogAction.setText("Profile was deleted");
-                holder.tvLogAction.setTextColor(Color.parseColor("#F44336")); // Red text
+                holder.tvLogAction.setTextColor(Color.parseColor("#F44336"));
                 holder.ivLogIcon.setColorFilter(Color.parseColor("#F44336"));
                 holder.ivLogIcon.setImageResource(android.R.drawable.ic_menu_delete);
 
-                // ⭐ SHOW RESTORE BUTTON ONLY FOR DELETED ITEMS
                 holder.btnRestorePlayer.setVisibility(View.VISIBLE);
 
-                // 🚀 FIX: Check if the player currently exists. If yes, gray out the button!
                 SharedPreferences prefs = getSharedPreferences("LetterLandMemory", MODE_PRIVATE);
                 Set<String> currentProfiles = prefs.getStringSet("ALL_PROFILES", new HashSet<>());
 
                 if (currentProfiles.contains(playerName)) {
-                    // Profile already exists -> Gray it out
+                    // 🌟 RESTORED VISUAL STATE
                     holder.btnRestorePlayer.setEnabled(false);
-                    holder.btnRestorePlayer.setBackgroundColor(Color.parseColor("#9E9E9E")); // Gray color
+                    holder.btnRestorePlayer.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#E0E0E0"))); // Light Gray
+                    holder.btnRestorePlayer.setTextColor(Color.parseColor("#4CAF50")); // Green Text
+                    holder.btnRestorePlayer.setIconResource(0); // Removes the icon
                     holder.btnRestorePlayer.setText("RESTORED");
                 } else {
-                    // Profile does not exist -> Make it clickable and green
+                    // 🌟 ACTIVE VISUAL STATE
                     holder.btnRestorePlayer.setEnabled(true);
-                    holder.btnRestorePlayer.setBackgroundColor(Color.parseColor("#4CAF50")); // Green color
+                    holder.btnRestorePlayer.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#4CAF50"))); // Solid Green
+                    holder.btnRestorePlayer.setTextColor(Color.WHITE); // White Text
+                    holder.btnRestorePlayer.setIconResource(android.R.drawable.ic_menu_revert); // Show Icon
+                    holder.btnRestorePlayer.setIconTint(ColorStateList.valueOf(Color.WHITE)); // White Icon
                     holder.btnRestorePlayer.setText("RESTORE");
                 }
 
             } else if (type.equals("ADDED")) {
                 holder.tvLogAction.setText("Added as a new profile");
-                holder.tvLogAction.setTextColor(Color.parseColor("#4CAF50")); // Green text
+                holder.tvLogAction.setTextColor(Color.parseColor("#4CAF50"));
                 holder.ivLogIcon.setColorFilter(Color.parseColor("#4CAF50"));
                 holder.ivLogIcon.setImageResource(android.R.drawable.ic_menu_add);
                 holder.btnRestorePlayer.setVisibility(View.GONE);
 
             } else if (type.equals("RESTORED")) {
-                holder.tvLogAction.setText("Profile was restored by Admin");
-                holder.tvLogAction.setTextColor(Color.parseColor("#4CAF50")); // Green text
+                holder.tvLogAction.setText("Profile was restored");
+                holder.tvLogAction.setTextColor(Color.parseColor("#4CAF50"));
                 holder.ivLogIcon.setColorFilter(Color.parseColor("#4CAF50"));
                 holder.ivLogIcon.setImageResource(android.R.drawable.ic_menu_revert);
                 holder.btnRestorePlayer.setVisibility(View.GONE);
 
             } else if (type.equals("EDITED")) {
                 holder.tvLogAction.setText("Changed avatar image");
-                holder.tvLogAction.setTextColor(Color.parseColor("#FF9800")); // Orange text
+                holder.tvLogAction.setTextColor(Color.parseColor("#FF9800"));
                 holder.ivLogIcon.setColorFilter(Color.parseColor("#FF9800"));
                 holder.ivLogIcon.setImageResource(android.R.drawable.ic_menu_edit);
                 holder.btnRestorePlayer.setVisibility(View.GONE);
             }
 
-            // 🛠️ THE RESTORE BUTTON LOGIC
-            holder.btnRestorePlayer.setOnClickListener(v -> {
-                SoundManager.getInstance(PlayerLogsActivity.this).playClick();
+            holder.btnRestorePlayer.setOnClickListener(null);
+            holder.btnRestorePlayer.setOnTouchListener((v, event) -> {
+                if (event.getAction() == MotionEvent.ACTION_UP && holder.btnRestorePlayer.isEnabled()) {
+                    long currentTime = System.currentTimeMillis();
+                    if (currentTime - lastRestoreTouchTime < 1000) {
+                        return true;
+                    }
+                    lastRestoreTouchTime = currentTime;
 
-                // 1. Instantly gray out the button so the user can't spam click it
-                holder.btnRestorePlayer.setEnabled(false);
-                holder.btnRestorePlayer.setBackgroundColor(Color.parseColor("#9E9E9E"));
-                holder.btnRestorePlayer.setText("RESTORED");
+                    SoundManager.getInstance(PlayerLogsActivity.this).playClick();
 
-                // 2. Add them back to SharedPreferences
-                SharedPreferences prefs = getSharedPreferences("LetterLandMemory", MODE_PRIVATE);
-                Set<String> oldProfiles = prefs.getStringSet("ALL_PROFILES", new HashSet<>());
-                Set<String> newProfiles = new HashSet<>(oldProfiles);
+                    // 🌟 INSTANTLY APPLY RESTORED VISUAL STATE ON CLICK
+                    holder.btnRestorePlayer.setEnabled(false);
+                    holder.btnRestorePlayer.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#E0E0E0")));
+                    holder.btnRestorePlayer.setTextColor(Color.parseColor("#4CAF50"));
+                    holder.btnRestorePlayer.setIconResource(0);
+                    holder.btnRestorePlayer.setText("RESTORED");
 
-                if (newProfiles.contains(playerName)) {
-                    Toast.makeText(PlayerLogsActivity.this, "This profile already exists!", Toast.LENGTH_SHORT).show();
-                    return;
+                    SharedPreferences prefs = getSharedPreferences("LetterLandMemory", MODE_PRIVATE);
+                    Set<String> oldProfiles = prefs.getStringSet("ALL_PROFILES", new HashSet<>());
+                    Set<String> newProfiles = new HashSet<>(oldProfiles);
+
+                    if (newProfiles.contains(playerName)) {
+                        Toast.makeText(PlayerLogsActivity.this, "This profile already exists!", Toast.LENGTH_SHORT).show();
+                        return true;
+                    }
+
+                    newProfiles.add(playerName);
+                    prefs.edit().putStringSet("ALL_PROFILES", newProfiles).apply();
+
+                    Toast.makeText(PlayerLogsActivity.this, playerName + " has been RESTORED!", Toast.LENGTH_LONG).show();
+
+                    new Thread(() -> {
+                        LogEntry restoredLog = new LogEntry("PLAYER_LOG", "RESTORED|" + playerName, System.currentTimeMillis());
+                        AppDatabase.getInstance(PlayerLogsActivity.this).logDao().insertLog(restoredLog);
+
+                        runOnUiThread(PlayerLogsActivity.this::loadLogsFromDatabase);
+                    }).start();
+
+                    return true;
                 }
-
-                newProfiles.add(playerName);
-                prefs.edit().putStringSet("ALL_PROFILES", newProfiles).apply();
-
-                Toast.makeText(PlayerLogsActivity.this, playerName + " has been RESTORED!", Toast.LENGTH_LONG).show();
-
-                // 3. Add a log saying they were restored
-                new Thread(() -> {
-                    LogEntry restoredLog = new LogEntry("PLAYER_LOG", "RESTORED|" + playerName, System.currentTimeMillis());
-                    AppDatabase.getInstance(PlayerLogsActivity.this).logDao().insertLog(restoredLog);
-
-                    // 4. Reload the UI!
-                    runOnUiThread(PlayerLogsActivity.this::loadLogsFromDatabase);
-                }).start();
+                return false;
             });
         }
 

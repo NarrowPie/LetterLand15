@@ -61,15 +61,16 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRestorePlayer"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="@font/kid_font"
             android:text="RESTORE"
-            android:textColor="#4CAF50"
+            android:textColor="#FFFFFF"
             android:visibility="gone"
+            app:backgroundTint="#4CAF50"
+            app:cornerRadius="20dp"
             app:icon="@android:drawable/ic_menu_revert"
-            app:iconTint="#4CAF50" />
+            app:iconTint="#FFFFFF" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
