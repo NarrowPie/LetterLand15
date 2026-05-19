@@ -10,6 +10,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.android.material.button.MaterialButton;
 
 public class AdminActivity extends AppCompatActivity {
@@ -22,7 +23,6 @@ public class AdminActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin);
 
-        // 🌟 FIX: Correctly mapped as MaterialButtons to prevent the app from crashing!
         MaterialButton btnBack = findViewById(R.id.btnBack);
         MaterialButton btnChangePin = findViewById(R.id.btnChangePin);
         MaterialButton btnAdminUserLogs = findViewById(R.id.btnAdminUserLogs);
@@ -44,7 +44,6 @@ public class AdminActivity extends AppCompatActivity {
             showChangePinDialog();
         });
 
-        // 🌟 FIX: All clicks are handled strictly here now. No more double-click sounds!
         btnAdminUserLogs.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
