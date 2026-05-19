@@ -47,7 +47,7 @@
                 android:fontFamily="@font/kid_font"
                 android:gravity="center"
                 android:includeFontPadding="false"
-                android:text="USER LOGS"
+                android:text="Profile(s) LOGS"
                 android:textColor="#009688"
                 android:textSize="28sp"
                 app:autoSizeMaxTextSize="28sp"

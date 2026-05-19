@@ -32,6 +32,9 @@ public class AdminActivity extends AppCompatActivity {
         MaterialButton btnEditAlmanac = findViewById(R.id.btnEditAlmanac);
         MaterialButton btnDeletedLogs = findViewById(R.id.btnDeletedLogs);
 
+        // 🌟 Initialize the new Manage Storage Button
+        MaterialButton btnManageStorage = findViewById(R.id.btnManageStorage);
+
         btnBack.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
@@ -44,7 +47,6 @@ public class AdminActivity extends AppCompatActivity {
             showChangePinDialog();
         });
 
-        // 🌟 FIX: The buttons are alive again! Safely routed through the Java listener.
         btnAdminUserLogs.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
@@ -53,7 +55,6 @@ public class AdminActivity extends AppCompatActivity {
             }
         });
 
-        // 🌟 FIX: The buttons are alive again!
         btnAdminPlayerLogs.setOnClickListener(v -> {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
@@ -88,6 +89,13 @@ public class AdminActivity extends AppCompatActivity {
             if (isSpamClick()) return;
             SoundManager.getInstance(this).playClick();
             startActivity(new Intent(AdminActivity.this, DeletedLogsActivity.class));
+        });
+
+        // 🌟 Click Listener for Manage Storage (Triggers PIN check)
+        btnManageStorage.setOnClickListener(v -> {
+            if (isSpamClick()) return;
+            SoundManager.getInstance(this).playClick();
+            showConfirmWipeDialog();
         });
     }
 
@@ -151,6 +159,46 @@ public class AdminActivity extends AppCompatActivity {
         });
 
         pinDialog.show();
+    }
+
+    // 🌟 Custom PIN check opens the new Storage Management Screen!
+    private void showConfirmWipeDialog() {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_admin_pin, null);
+        AlertDialog wipePinDialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .create();
+
+        if (wipePinDialog.getWindow() != null) {
+            wipePinDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        EditText etAdminPin = dialogView.findViewById(R.id.etAdminPin);
+        MaterialButton btnCancelPin = dialogView.findViewById(R.id.btnCancelPin);
+        MaterialButton btnConfirmPin = dialogView.findViewById(R.id.btnConfirmPin);
+
+        btnCancelPin.setOnClickListener(v -> {
+            SoundManager.getInstance(this).playClick();
+            wipePinDialog.dismiss();
+        });
+
+        btnConfirmPin.setOnClickListener(v -> {
+            SoundManager.getInstance(this).playClick();
+
+            String enteredPin = etAdminPin.getText().toString();
+            SharedPreferences prefs = getSharedPreferences("LetterLandMemory", MODE_PRIVATE);
+            String savedPin = prefs.getString("ADMIN_PIN", "1234");
+
+            if (enteredPin.equals(savedPin)) {
+                wipePinDialog.dismiss();
+                // Launches the new screen
+                startActivity(new Intent(AdminActivity.this, StorageManagementActivity.class));
+            } else {
+                Toast.makeText(this, "Incorrect PIN. Action blocked.", Toast.LENGTH_SHORT).show();
+                etAdminPin.setText("");
+            }
+        });
+
+        wipePinDialog.show();
     }
 
     @Override
