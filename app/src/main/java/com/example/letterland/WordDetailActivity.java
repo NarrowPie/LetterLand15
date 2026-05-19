@@ -120,13 +120,13 @@ public class WordDetailActivity extends AppCompatActivity {
                     btnScanDelete.setVisibility(View.GONE);
                     btnScanDelete.setClickable(false);
 
-                    // 🌟 THE LAYOUT FIX: Distribute 100% of the weight to the remaining button!
+                    // 🌟 THE LAYOUT FIX: Tell the button to consume the full weightSum of 2!
                     LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) btnScanAgain.getLayoutParams();
-                    params.weight = 1.0f; // This forces it to naturally stretch and fill the space perfectly
+                    params.weight = 2.0f; // Fixes the 50% blank screen issue
+                    params.setMarginStart(0); // Removes the lopsided 8dp margin
                     btnScanAgain.setLayoutParams(params);
                 }
             }
-
             if (btnSpeak != null) btnSpeak.setVisibility(View.VISIBLE);
 
         } else if ("WRITE".equals(sourcePage)) {
@@ -142,13 +142,13 @@ public class WordDetailActivity extends AppCompatActivity {
                     btnWriteDelete.setVisibility(View.GONE);
                     btnWriteDelete.setClickable(false);
 
-                    // 🌟 THE LAYOUT FIX: Distribute 100% of the weight to the remaining button!
+                    // 🌟 THE LAYOUT FIX: Tell the button to consume the full weightSum of 2!
                     LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) btnWriteAgain.getLayoutParams();
-                    params.weight = 1.0f; // This forces it to naturally stretch and fill the space perfectly
+                    params.weight = 2.0f; // Fixes the 50% blank screen issue
+                    params.setMarginStart(0); // Removes the lopsided 8dp margin
                     btnWriteAgain.setLayoutParams(params);
                 }
             }
-
             if (btnSpeak != null) btnSpeak.setVisibility(View.VISIBLE);
 
         } else {
@@ -228,7 +228,7 @@ public class WordDetailActivity extends AppCompatActivity {
 
                                     if (checkExisting != null) {
                                         runOnUiThread(() -> {
-                                            Toast.makeText(this, "The word '" + newName + "' already exists! Please choose a different name.", Toast.LENGTH_LONG).show();
+                                            Toast.makeText(this, "The word '" + newName + "' already exists!\nPlease choose a different name.", Toast.LENGTH_LONG).show();
                                         });
                                     } else {
                                         WordEntry oldEntry = AppDatabase.getInstance(this).wordDao().findWordForProfile(wordText, player);
@@ -257,7 +257,6 @@ public class WordDetailActivity extends AppCompatActivity {
         if (btnDelete != null) btnDelete.setOnClickListener(v -> showCustomDeleteDialog());
         if (btnWriteDelete != null) btnWriteDelete.setOnClickListener(v -> showCustomDeleteDialog());
         if (btnScanDelete != null) btnScanDelete.setOnClickListener(v -> showCustomDeleteDialog());
-
         if (btnScanAgain != null) btnScanAgain.setOnClickListener(v -> finish());
         if (btnWriteAgain != null) btnWriteAgain.setOnClickListener(v -> finish());
         if (btnBack != null) btnBack.setOnClickListener(v -> finish());
@@ -265,12 +264,10 @@ public class WordDetailActivity extends AppCompatActivity {
 
     private void showCustomDeleteDialog() {
         SoundManager.getInstance(this).playClick();
-
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_delete, null);
         AlertDialog deleteDialog = new AlertDialog.Builder(this)
                 .setView(dialogView)
                 .create();
-
         if (deleteDialog.getWindow() != null) {
             deleteDialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
         }
@@ -279,13 +276,11 @@ public class WordDetailActivity extends AppCompatActivity {
             SoundManager.getInstance(this).playClick();
             deleteDialog.dismiss();
         });
-
         dialogView.findViewById(R.id.btnConfirmDelete).setOnClickListener(v1 -> {
             SoundManager.getInstance(this).playClick();
             deleteDialog.dismiss();
             deleteWordFromDatabase();
         });
-
         deleteDialog.show();
     }
 

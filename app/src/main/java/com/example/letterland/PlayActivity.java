@@ -43,7 +43,9 @@ import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -64,7 +66,8 @@ public class PlayActivity extends AppCompatActivity {
     private Handler realTimeHandler = new Handler(Looper.getMainLooper());
     private boolean isScanningPaused = false;
 
-    private final List<String> DICTIONARY = new java.util.ArrayList<>();
+    // 🚀 FIX 1: Changed to HashSet for instant O(1) lookups instead of slow O(N) linear scans
+    private final Set<String> DICTIONARY = new HashSet<>();
 
     private ExecutorService cameraExecutor;
 
@@ -74,7 +77,8 @@ public class PlayActivity extends AppCompatActivity {
             new ActivityResultContracts.TakePicturePreview(),
             bitmap -> {
                 if (bitmap != null && !pendingWord.isEmpty()) {
-                    new Thread(() -> saveToAlmanac(pendingWord, bitmap)).start();
+                    // 🚀 FIX 2: Used existing executor instead of spawning rogue threads
+                    cameraExecutor.execute(() -> saveToAlmanac(pendingWord, bitmap));
                 } else {
                     Toast.makeText(this, "No picture taken", Toast.LENGTH_SHORT).show();
                     resumeRealTimeScanning();
@@ -83,7 +87,7 @@ public class PlayActivity extends AppCompatActivity {
     );
 
     private void loadDictionaryFromAssets() {
-        new Thread(() -> {
+        cameraExecutor.execute(() -> {
             try {
                 java.io.InputStream is = getAssets().open("dictionary.txt");
                 java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is));
@@ -109,14 +113,12 @@ public class PlayActivity extends AppCompatActivity {
 
                 for (WordEntry entry : savedWords) {
                     String dbWord = entry.word.toUpperCase().trim();
-                    if (!DICTIONARY.contains(dbWord)) {
-                        DICTIONARY.add(dbWord);
-                    }
+                    DICTIONARY.add(dbWord); // HashSet naturally handles duplicates
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }).start();
+        });
     }
 
     @Override
@@ -173,7 +175,7 @@ public class PlayActivity extends AppCompatActivity {
             isScanningPaused = true;
             String wordToSearch = currentlyHighlightedWord;
 
-            new Thread(() -> {
+            cameraExecutor.execute(() -> {
                 String player = getSharedPreferences("LetterLandMemory", MODE_PRIVATE).getString("ACTIVE_PROFILE", "Default");
                 WordEntry savedWord = AppDatabase.getInstance(this).wordDao().findWordForProfile(wordToSearch, player);
 
@@ -218,7 +220,7 @@ public class PlayActivity extends AppCompatActivity {
                         newWordDialog.show();
                     }
                 });
-            }).start();
+            });
         });
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
@@ -413,9 +415,7 @@ public class PlayActivity extends AppCompatActivity {
             WordEntry newEntry = new WordEntry(word, player, file.getAbsolutePath());
             AppDatabase.getInstance(this).wordDao().insert(newEntry);
 
-            if (!DICTIONARY.contains(word)) {
-                DICTIONARY.add(word);
-            }
+            DICTIONARY.add(word);
 
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed()) return;
@@ -455,19 +455,21 @@ public class PlayActivity extends AppCompatActivity {
         return bestMatch;
     }
 
+    // 🚀 FIX 3: Replaced the heavy memory-hogging 2D array with a space-optimized 1D array
     private int calculateEditDistance(String a, String b) {
-        int[][] dp = new int[a.length() + 1][b.length() + 1];
-        for (int i = 0; i <= a.length(); i++) {
-            for (int j = 0; j <= b.length(); j++) {
-                if (i == 0) dp[i][j] = j;
-                else if (j == 0) dp[i][j] = i;
-                else {
-                    int cost = (a.charAt(i - 1) == b.charAt(j - 1)) ? 0 : 1;
-                    dp[i][j] = Math.min(Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1), dp[i - 1][j - 1] + cost);
-                }
+        int[] costs = new int[b.length() + 1];
+        for (int j = 0; j < costs.length; j++) costs[j] = j;
+        for (int i = 1; i <= a.length(); i++) {
+            costs[0] = i;
+            int nw = i - 1;
+            for (int j = 1; j <= b.length(); j++) {
+                int cj = Math.min(1 + Math.min(costs[j], costs[j - 1]),
+                        a.charAt(i - 1) == b.charAt(j - 1) ? nw : nw + 1);
+                nw = costs[j];
+                costs[j] = cj;
             }
         }
-        return dp[a.length()][b.length()];
+        return costs[b.length()];
     }
 
     @Override
